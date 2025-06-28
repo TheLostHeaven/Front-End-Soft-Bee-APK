@@ -7,6 +7,7 @@ import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:hive/hive.dart';
 import '../models/model.dart';
+import '../../inventory/models/inventory_item.dart';
 
 class LocalDBService {
   static Database? _database;
@@ -166,6 +167,20 @@ class LocalDBService {
       )
     ''');
 
+    // Tabla inventory_items
+    await db.execute('''
+      CREATE TABLE inventory_items (
+        id INTEGER PRIMARY KEY,
+        item_name TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        unit TEXT,
+        apiary_id INTEGER,
+        created_at TEXT,
+        updated_at TEXT,
+        sincronizado INTEGER DEFAULT 0
+      )
+    ''');
+
     debugPrint('✅ Tablas creadas correctamente');
   }
 
@@ -280,6 +295,47 @@ class LocalDBService {
     }
   }
 
+  Future<Apiario?> getApiarioById(int id) async {
+    if (kIsWeb) {
+      final box = await hiveBox;
+      final data = box.get('apiario_$id');
+      if (data != null) {
+        return Apiario.fromJson(Map<String, dynamic>.from(data));
+      }
+      return null;
+    } else {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db!.query(
+        'apiarios',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (maps.isNotEmpty) {
+        return Apiario.fromJson(maps.first);
+      }
+      return null;
+    }
+  }
+
+  Future<List<Apiario>> getPendingApiarios() async {
+    if (kIsWeb) {
+      final box = await hiveBox;
+      final data = box.toMap();
+      return data.entries
+          .where((e) => e.key.toString().startsWith('apiario_'))
+          .map((e) => Apiario.fromJson(Map<String, dynamic>.from(e.value)))
+          .where((a) => a.sincronizado == false)
+          .toList();
+    } else {
+      final db = await database;
+      final List<Map<String, dynamic>> maps =
+          await db!.query('apiarios', where: 'sincronizado = 0');
+      return List.generate(maps.length, (i) {
+        return Apiario.fromJson(maps[i]);
+      });
+    }
+  }
+
   Future<int> deleteApiario(int? id) async {
     if (kIsWeb) {
       final box = await hiveBox;
@@ -306,7 +362,7 @@ class LocalDBService {
       return await db!.insert('colmenas', {
         ...colmena.toJson(),
         'fecha_creacion': DateTime.now().toIso8601String(),
-        'sincronizado': 0,
+        'sincronizado': colmena.sincronizado ? 1 : 0,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
@@ -328,6 +384,45 @@ class LocalDBService {
         whereArgs: [apiarioId],
         orderBy: 'numero_colmena ASC',
       );
+      return List.generate(maps.length, (i) {
+        return Colmena.fromJson(maps[i]);
+      });
+    }
+  }
+
+  Future<int> updateColmena(Colmena colmena) async {
+    if (kIsWeb) {
+      final box = await hiveBox;
+      await box.put('colmena_${colmena.id}', colmena.toJson());
+      return colmena.id ?? 0;
+    } else {
+      final db = await database;
+      return await db!.update(
+        'colmenas',
+        {
+          ...colmena.toJson(),
+          'fecha_ultima_inspeccion': DateTime.now().toIso8601String(),
+          'sincronizado': colmena.sincronizado ? 1 : 0,
+        },
+        where: 'id = ?',
+        whereArgs: [colmena.id],
+      );
+    }
+  }
+
+  Future<List<Colmena>> getPendingColmenas() async {
+    if (kIsWeb) {
+      final box = await hiveBox;
+      final data = box.toMap();
+      return data.entries
+          .where((e) => e.key.toString().startsWith('colmena_'))
+          .map((e) => Colmena.fromJson(Map<String, dynamic>.from(e.value)))
+          .where((c) => c.sincronizado == false)
+          .toList();
+    } else {
+      final db = await database;
+      final List<Map<String, dynamic>> maps =
+          await db!.query('colmenas', where: 'sincronizado = 0');
       return List.generate(maps.length, (i) {
         return Colmena.fromJson(maps[i]);
       });
@@ -382,7 +477,10 @@ class LocalDBService {
       final db = await database;
       await db!.insert(
         'preguntas',
-        pregunta.toJson(),
+        {
+          ...pregunta.toJson(),
+          'sincronizado': pregunta.sincronizado ? 1 : 0,
+        },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       
@@ -575,6 +673,50 @@ class LocalDBService {
       );
     }
   }
+
+  // ================ INVENTORY ITEMS ================
+  Future<List<InventoryItem>> getPendingInventoryItems() async {
+    if (kIsWeb) {
+      final box = await hiveBox;
+      final data = box.toMap();
+      return data.entries
+          .where((e) => e.key.toString().startsWith('inventory_item_'))
+          .map((e) => InventoryItem.fromJson(Map<String, dynamic>.from(e.value)))
+          .where((item) => item.sincronizado == false)
+          .toList();
+    } else {
+      final db = await database;
+      final List<Map<String, dynamic>> maps =
+          await db!.query('inventory_items', where: 'sincronizado = 0');
+      return List.generate(maps.length, (i) {
+        return InventoryItem.fromJson(maps[i]);
+      });
+    }
+  }
+
+  Future<int> markInventoryItemAsSynced(int id) async {
+    if (kIsWeb) {
+      final box = await hiveBox;
+      final item = box.get('inventory_item_$id');
+      if (item != null) {
+        item['sincronizado'] = true;
+        await box.put('inventory_item_$id', item);
+      }
+      return 1;
+    } else {
+      final db = await database;
+      return await db!.update(
+        'inventory_items',
+        {'sincronizado': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+  }
+
+  
+
+  
 
   // ================ ESTADÍSTICAS ================
   Future<Map<String, dynamic>> getEstadisticas() async {

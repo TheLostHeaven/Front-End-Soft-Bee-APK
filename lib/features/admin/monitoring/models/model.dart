@@ -45,6 +45,7 @@ class Pregunta {
   int? apiarioId;
   DateTime? fechaCreacion;
   DateTime? fechaActualizacion;
+  bool sincronizado;
 
   Pregunta({
     required this.id,
@@ -62,6 +63,7 @@ class Pregunta {
     this.apiarioId,
     this.fechaCreacion,
     this.fechaActualizacion,
+    this.sincronizado = false,
   });
 
   factory Pregunta.fromJson(Map<String, dynamic> json) {
@@ -94,6 +96,7 @@ class Pregunta {
       fechaActualizacion: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'])
           : null,
+      sincronizado: json['sincronizado'] ?? false,
     );
   }
 
@@ -111,6 +114,7 @@ class Pregunta {
       'display_order': orden,
       'is_active': activa,
       'apiary_id': apiarioId,
+      'sincronizado': sincronizado,
     };
   }
 
@@ -128,6 +132,7 @@ class Pregunta {
     int? orden,
     bool? activa,
     int? apiarioId,
+    bool? sincronizado,
   }) {
     return Pregunta(
       id: id ?? this.id,
@@ -146,6 +151,7 @@ class Pregunta {
       apiarioId: apiarioId ?? this.apiarioId,
       fechaCreacion: fechaCreacion,
       fechaActualizacion: DateTime.now(),
+      sincronizado: sincronizado ?? this.sincronizado,
     );
   }
 }
@@ -160,6 +166,7 @@ class Apiario {
   final List<Colmena>? colmenas;
   final List<Pregunta>? preguntas;
   final Map<String, dynamic>? metadatos;
+  final bool sincronizado;
 
   Apiario({
     required this.id,
@@ -171,6 +178,7 @@ class Apiario {
     this.colmenas,
     this.preguntas,
     this.metadatos,
+    this.sincronizado = false,
   });
 
   factory Apiario.fromJson(Map<String, dynamic> json) {
@@ -194,6 +202,7 @@ class Apiario {
                 .toList()
           : null,
       metadatos: json['metadatos'] ?? json['metadata'],
+      sincronizado: json['sincronizado'] ?? false,
     );
   }
 
@@ -215,6 +224,7 @@ class Apiario {
     List<Colmena>? colmenas,
     List<Pregunta>? preguntas,
     Map<String, dynamic>? metadatos,
+    bool? sincronizado,
   }) {
     return Apiario(
       id: id ?? this.id,
@@ -226,6 +236,7 @@ class Apiario {
       colmenas: colmenas ?? this.colmenas,
       preguntas: preguntas ?? this.preguntas,
       metadatos: metadatos ?? this.metadatos,
+      sincronizado: sincronizado ?? this.sincronizado,
     );
   }
 }
@@ -239,6 +250,7 @@ class Colmena {
   final DateTime? fechaUltimaInspeccion;
   final String? estadoReina;
   final Map<String, dynamic>? metadatos;
+  final bool sincronizado;
 
   Colmena({
     required this.id,
@@ -249,6 +261,7 @@ class Colmena {
     this.fechaUltimaInspeccion,
     this.estadoReina,
     this.metadatos,
+    this.sincronizado = false,
   });
 
   factory Colmena.fromJson(Map<String, dynamic> json) {
@@ -265,6 +278,7 @@ class Colmena {
           : null,
       estadoReina: json['queen_status'],
       metadatos: json['metadatos'] ?? json['metadata'],
+      sincronizado: json['sincronizado'] ?? false,
     );
   }
 
@@ -276,7 +290,32 @@ class Colmena {
       'active': activa,
       'queen_status': estadoReina,
       'metadata': metadatos,
+      'sincronizado': sincronizado,
     };
+  }
+
+  Colmena copyWith({
+    int? id,
+    int? numeroColmena,
+    int? idApiario,
+    bool? activa,
+    DateTime? fechaCreacion,
+    DateTime? fechaUltimaInspeccion,
+    String? estadoReina,
+    Map<String, dynamic>? metadatos,
+    bool? sincronizado,
+  }) {
+    return Colmena(
+      id: id ?? this.id,
+      numeroColmena: numeroColmena ?? this.numeroColmena,
+      idApiario: idApiario ?? this.idApiario,
+      activa: activa ?? this.activa,
+      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
+      fechaUltimaInspeccion: fechaUltimaInspeccion ?? this.fechaUltimaInspeccion,
+      estadoReina: estadoReina ?? this.estadoReina,
+      metadatos: metadatos ?? this.metadatos,
+      sincronizado: sincronizado ?? this.sincronizado,
+    );
   }
 }
 
@@ -380,6 +419,7 @@ class NotificacionReina {
   final DateTime fechaCreacion;
   final DateTime? fechaVencimiento;
   final Map<String, dynamic>? metadatos;
+  final bool sincronizado;
 
   NotificacionReina({
     required this.id,
@@ -393,6 +433,7 @@ class NotificacionReina {
     required this.fechaCreacion,
     this.fechaVencimiento,
     this.metadatos,
+    this.sincronizado = false,
   });
 
   factory NotificacionReina.fromJson(Map<String, dynamic> json) {
@@ -415,6 +456,7 @@ class NotificacionReina {
           ? DateTime.tryParse(json['fecha_vencimiento'] ?? json['expires_at'])
           : null,
       metadatos: json['metadatos'] ?? json['metadata'],
+      sincronizado: json['sincronizado'] ?? false,
     );
   }
 
@@ -431,51 +473,38 @@ class NotificacionReina {
       'fecha_creacion': fechaCreacion.toIso8601String(),
       'fecha_vencimiento': fechaVencimiento?.toIso8601String(),
       'metadatos': metadatos,
+      'sincronizado': sincronizado,
     };
   }
-}
 
-class Usuario {
-  final int id;
-  final String nombre;
-  final String username;
-  final String email;
-  final String phone;
-  final String? profilePicture;
-  final DateTime? fechaCreacion;
-
-  Usuario({
-    required this.id,
-    required this.nombre,
-    required this.username,
-    required this.email,
-    required this.phone,
-    this.profilePicture,
-    this.fechaCreacion,
-  });
-
-  factory Usuario.fromJson(Map<String, dynamic> json) {
-    return Usuario(
-      id: json['id'] ?? 0,
-      nombre: json['nombre'] ?? json['name'] ?? '',
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      profilePicture: json['profile_picture'] ?? json['profile_picture_url'],
-      fechaCreacion: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
-          : null,
+  NotificacionReina copyWith({
+    int? id,
+    int? apiarioId,
+    int? colmenaId,
+    String? tipo,
+    String? titulo,
+    String? mensaje,
+    String? prioridad,
+    bool? leida,
+    DateTime? fechaCreacion,
+    DateTime? fechaVencimiento,
+    Map<String, dynamic>? metadatos,
+    bool? sincronizado,
+  }) {
+    return NotificacionReina(
+      id: id ?? this.id,
+      apiarioId: apiarioId ?? this.apiarioId,
+      colmenaId: colmenaId ?? this.colmenaId,
+      tipo: tipo ?? this.tipo,
+      titulo: titulo ?? this.titulo,
+      mensaje: mensaje ?? this.mensaje,
+      prioridad: prioridad ?? this.prioridad,
+      leida: leida ?? this.leida,
+      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
+      fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
+      metadatos: metadatos ?? this.metadatos,
+      sincronizado: sincronizado ?? this.sincronizado,
     );
   }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'nombre': nombre,
-      'username': username,
-      'email': email,
-      'phone': phone,
-      'profile_picture': profilePicture,
-    };
-  }
 }
+

@@ -6,6 +6,7 @@ class InventoryItem {
   final int apiaryId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool sincronizado;
 
   InventoryItem({
     required this.id,
@@ -15,6 +16,7 @@ class InventoryItem {
     required this.apiaryId,
     required this.createdAt,
     required this.updatedAt,
+    this.sincronizado = true,
   });
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class InventoryItem {
       apiaryId: json['apiary_id'] ?? 1,
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
+      sincronizado: json['sincronizado'] == 1 ? true : false,
     );
   }
 
@@ -38,12 +41,13 @@ class InventoryItem {
       'apiary_id': apiaryId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'sincronizado': sincronizado ? 1 : 0,
     };
   }
 
   Map<String, dynamic> toCreateJson() {
     return {
-      'item_name': itemName,
+      'name': itemName,
       'quantity': quantity,
       'unit': unit,
       'apiary_id': apiaryId,
@@ -62,6 +66,7 @@ class InventoryItem {
     int? apiaryId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? sincronizado,
   }) {
     return InventoryItem(
       id: id ?? this.id,
@@ -71,6 +76,7 @@ class InventoryItem {
       apiaryId: apiaryId ?? this.apiaryId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      sincronizado: sincronizado ?? this.sincronizado,
     );
   }
 
@@ -81,6 +87,7 @@ class InventoryItem {
       'nombre': itemName,
       'cantidad': quantity.toString(),
       'unidad': unit,
+      'sincronizado': sincronizado ? 1 : 0,
     };
   }
 
@@ -94,6 +101,7 @@ class InventoryItem {
       apiaryId: 1, // Default apiary ID
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      sincronizado: map['sincronizado'] == 1 ? true : false,
     );
   }
 }

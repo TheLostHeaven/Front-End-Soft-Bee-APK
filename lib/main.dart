@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -15,6 +16,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 // Opcional: para otras plataformas
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sotfbee/core/services/connectivity_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,11 +24,7 @@ void main() async {
   // Inicializa Hive para todas las plataformas
   await Hive.initFlutter();
 
-  // ✅ Solo si no es Web, se inicializa sqflite_common_ffi
-  if (!kIsWeb) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  // FFI initialization is now handled in LocalDBService to avoid conflicts.
 
   // Configura la estrategia de URLs limpias en Web
   // setUrlStrategy(PathUrlStrategy());
@@ -36,6 +34,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MonitoreoController()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
       ],
       child: const SoftBeeApp(),
     ),

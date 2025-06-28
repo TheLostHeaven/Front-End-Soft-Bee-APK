@@ -36,7 +36,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
       icon: Icons.inventory,
       color: Color(0xFFFFA500),
       description: 'Gestiona el inventario de tu apiario',
-      route: GestionInventarioUpdated(),
+      route: GestionInventarioUpdated(apiaryId: _userProfile?.apiaries.first.id ?? 1),
     ),
     MenuItemData(
       title: 'Informes',

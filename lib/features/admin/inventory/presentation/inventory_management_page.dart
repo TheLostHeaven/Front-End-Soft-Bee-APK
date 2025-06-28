@@ -58,6 +58,10 @@ class ResponsiveLayout extends StatelessWidget {
 }
 
 class GestionInventarioUpdated extends StatefulWidget {
+  final int apiaryId;
+
+  const GestionInventarioUpdated({Key? key, required this.apiaryId}) : super(key: key);
+
   @override
   _GestionInventarioUpdatedState createState() =>
       _GestionInventarioUpdatedState();
@@ -176,7 +180,7 @@ class _GestionInventarioUpdatedState extends State<GestionInventarioUpdated>
           itemName: nombreController.text.trim(),
           quantity: int.parse(cantidadController.text),
           unit: unidadSeleccionada,
-          apiaryId: 1, // ID del apiario por defecto
+          apiaryId: widget.apiaryId, // Usar el apiaryId del widget
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );

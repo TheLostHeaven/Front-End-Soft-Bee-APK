@@ -915,15 +915,15 @@ class _QueenCalendarScreenState extends State<QueenCalendarScreen>
         },
       );
 
-      await dbService.saveNotificacionReina(notificacion);
+      // await dbService.saveNotificacionReina(notificacion);
 
-      if (isConnected) {
-        try {
-          await ApiService.crearNotificacionReina(notificacion);
-        } catch (e) {
-          debugPrint("⚠️ Error al sincronizar notificación: $e");
-        }
-      }
+      // if (isConnected) {
+      //   try {
+      //     await ApiService.crearNotificacionReina(notificacion);
+      //   } catch (e) {
+      //     debugPrint("⚠️ Error al sincronizar notificación: $e");
+      //   }
+      // }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
