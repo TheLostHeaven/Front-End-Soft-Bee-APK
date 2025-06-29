@@ -29,14 +29,14 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
       icon: Icons.monitor,
       color: Color(0xFFFBC209),
       description: 'Supervisa el estado de tus colmenas en tiempo real',
-      route: MainDashboardPage(),
+      route: MainMonitoringScreen(),
     ),
     MenuItemData(
       title: 'Inventario',
       icon: Icons.inventory,
       color: Color(0xFFFFA500),
       description: 'Gestiona el inventario de tu apiario',
-      route: GestionInventarioUpdated(apiaryId: _userProfile?.apiaries.first.id ?? 1),
+      route: GestionInventarioUpdated(),
     ),
     MenuItemData(
       title: 'Informes',

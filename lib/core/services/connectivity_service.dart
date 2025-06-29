@@ -6,14 +6,14 @@ import 'package:flutter/foundation.dart';
 
 class ConnectivityService extends ChangeNotifier {
   final Connectivity _connectivity = Connectivity();
-  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
 
   final ValueNotifier<bool> isConnected = ValueNotifier<bool>(false);
 
   ConnectivityService() {
     _checkInitialConnectivity();
     _connectivitySubscription =
-        _connectivity.onConnectivityChanged.listen((ConnectivityResult result) => _updateConnectionStatus(result));
+        _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) => _updateConnectionStatus(results));
   }
 
   Future<void> _checkInitialConnectivity() async {
@@ -21,9 +21,9 @@ class ConnectivityService extends ChangeNotifier {
     _updateConnectionStatus(result);
   }
 
-  void _updateConnectionStatus(ConnectivityResult result) {
-    final hasConnection = result == ConnectivityResult.mobile ||
-                           result == ConnectivityResult.wifi;
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
+    final hasConnection = results.first == ConnectivityResult.mobile ||
+                           results.first == ConnectivityResult.wifi;
     if (isConnected.value != hasConnection) {
       isConnected.value = hasConnection;
       notifyListeners();
