@@ -51,7 +51,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> registrarUsuario() async {
-    final url = Uri.parse("https://softbee-back-end.onrender.com/api/register");
+    final url = Uri.parse("https://softbee-back-end-1.onrender.com/api/register");
 
     try {
       setState(() => _isLoading = true);

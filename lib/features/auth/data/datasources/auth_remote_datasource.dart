@@ -8,7 +8,7 @@ void _debugPrint(String message) {
 }
 
 class AuthService {
-  static const String _baseUrl = 'https://softbee-back-end.onrender.com/api';
+  static const String _baseUrl = 'https://softbee-back-end-1.onrender.com/api';
 
   static Future<Map<String, dynamic>> login(
     String identifier,
@@ -71,7 +71,7 @@ class AuthService {
     try {
       _debugPrint("Verificando token...");
       final response = await http.get(
-        Uri.parse('$_baseUrl/users/me'),
+        Uri.parse('$_baseUrl/me'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json; charset=UTF-8',

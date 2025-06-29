@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../models/model.dart';
-import '../services/api_service.dart';
-import '../services/local_db_service.dart';
+import 'package:sotfbee/features/admin/monitoring/presentation/beehive_management_page.dart';
+import 'package:sotfbee/features/admin/monitoring/service/enhaced_api_service.dart';
+import 'package:sotfbee/features/admin/monitoring/widgets/enhanced_card_widget.dart';
+import '../models/enhanced_models.dart';
 
 class ApiariosManagementScreen extends StatefulWidget {
   const ApiariosManagementScreen({Key? key}) : super(key: key);
@@ -15,9 +16,6 @@ class ApiariosManagementScreen extends StatefulWidget {
 
 class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
     with SingleTickerProviderStateMixin {
-  // Servicios
-  late LocalDBService dbService;
-
   // Controladores
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _ubicacionController = TextEditingController();
@@ -44,10 +42,8 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
 
   Future<void> _initializeServices() async {
     try {
-      dbService = LocalDBService();
       await _loadApiarios();
       await _checkConnection();
-
       setState(() {
         isLoading = false;
       });
@@ -61,23 +57,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
 
   Future<void> _loadApiarios() async {
     try {
-      // Cargar desde base de datos local
-      apiarios = await dbService.getApiarios();
-
-      // Intentar sincronizar con servidor si hay conexión
-      if (await ApiService.hasInternetConnection()) {
-        try {
-          final serverApiarios = await ApiService.obtenerApiarios();
-          // Actualizar base de datos local
-          for (final apiario in serverApiarios) {
-            await dbService.insertApiario(apiario);
-          }
-          apiarios = serverApiarios;
-        } catch (e) {
-          debugPrint("⚠️ No se pudo sincronizar con servidor");
-        }
-      }
-
+      apiarios = await EnhancedApiService.obtenerApiarios();
       _filterApiarios();
       setState(() {});
     } catch (e) {
@@ -87,7 +67,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
 
   Future<void> _checkConnection() async {
     try {
-      final connected = await ApiService.verificarConexion();
+      final connected = await EnhancedApiService.verificarConexion();
       setState(() {
         isConnected = connected;
       });
@@ -118,57 +98,17 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth >= 768;
-    final isDesktop = screenWidth >= 1024;
 
     return Scaffold(
       backgroundColor: colorAmbarClaro,
-      appBar: AppBar(
-        title: Text(
-          'Gestión de Apiarios',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: colorNaranja,
-        elevation: 0,
-        actions: [
-          // Indicador de conexión
-          Container(
-            margin: EdgeInsets.only(right: 8),
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isConnected ? colorVerde : Colors.red,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isConnected ? Icons.cloud_done : Icons.cloud_off,
-                  color: Colors.white,
-                  size: 16,
-                ),
-                SizedBox(width: 4),
-                Text(
-                  isConnected ? "Online" : "Offline",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.sync, color: Colors.white),
-            onPressed: _syncData,
-            tooltip: "Sincronizar",
-          ),
-        ],
+      appBar: CustomAppBarWidget(
+        title: 'Gestión de Apiarios',
+        isConnected: isConnected,
+        onSync: _syncData,
       ),
-      body: isLoading ? _buildLoadingScreen() : _buildBody(isDesktop, isTablet),
+      body: isLoading
+          ? LoadingWidget(message: "Cargando apiarios...", color: colorNaranja)
+          : _buildBody(isTablet),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showApiarioDialog(),
         backgroundColor: colorVerde,
@@ -180,196 +120,130 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
             fontWeight: FontWeight.w600,
           ),
         ),
-      ),
+      ).animate().scale(delay: 800.ms),
     );
   }
 
-  Widget _buildLoadingScreen() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(colorAmarillo),
-          ),
-          SizedBox(height: 16),
-          Text(
-            "Cargando apiarios...",
-            style: GoogleFonts.poppins(fontSize: 16, color: colorNaranja),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBody(bool isDesktop, bool isTablet) {
+  Widget _buildBody(bool isTablet) {
     return Column(
       children: [
-        // Barra de búsqueda y estadísticas
-        _buildHeader(isDesktop, isTablet),
-
+        // Header con estadísticas y búsqueda
+        _buildHeader(isTablet),
         // Lista de apiarios
-        Expanded(child: _buildApiariosList(isDesktop, isTablet)),
+        Expanded(child: _buildApiariosList(isTablet)),
       ],
     );
   }
 
-  Widget _buildHeader(bool isDesktop, bool isTablet) {
+  Widget _buildHeader(bool isTablet) {
     return Container(
-      padding: EdgeInsets.all(isDesktop ? 24 : 16),
+      padding: EdgeInsets.all(16),
       child: Column(
         children: [
           // Estadísticas
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(isDesktop ? 20 : 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem(
-                    'Total Apiarios',
-                    apiarios.length.toString(),
-                    Icons.location_on,
-                    colorVerde,
-                    isDesktop,
-                  ),
-                  _buildStatItem(
-                    'Activos',
-                    apiarios.length.toString(),
-                    Icons.check_circle,
-                    colorAmarillo,
-                    isDesktop,
-                  ),
-                  _buildStatItem(
-                    'Sincronizados',
-                    isConnected ? apiarios.length.toString() : '0',
-                    Icons.sync,
-                    isConnected ? colorVerde : Colors.grey,
-                    isDesktop,
-                  ),
-                ],
+          Row(
+            children: [
+              Expanded(
+                child: StatCardWidget(
+                  label: 'Total Apiarios',
+                  value: apiarios.length.toString(),
+                  icon: Icons.location_on,
+                  color: colorVerde,
+                  animationDelay: 0,
+                ),
               ),
-            ),
-          ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.2, end: 0),
+              SizedBox(width: 12),
+              Expanded(
+                child: StatCardWidget(
+                  label: 'Activos',
+                  value: apiarios.length.toString(),
+                  icon: Icons.check_circle,
+                  color: colorAmarillo,
+                  animationDelay: 100,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: StatCardWidget(
+                  label: 'Sincronizados',
+                  value: isConnected ? apiarios.length.toString() : '0',
+                  icon: Icons.sync,
+                  color: isConnected ? colorVerde : Colors.grey,
+                  animationDelay: 200,
+                ),
+              ),
+            ],
+          ),
 
           SizedBox(height: 16),
 
           // Barra de búsqueda
-          Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Buscar apiarios...',
-                      hintStyle: GoogleFonts.poppins(),
-                      prefixIcon: Icon(Icons.search, color: colorNaranja),
-                      border: InputBorder.none,
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear, color: Colors.grey),
-                              onPressed: () {
-                                _searchController.clear();
-                                _filterApiarios();
-                                setState(() {});
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: (value) {
-                      _filterApiarios();
-                      setState(() {});
-                    },
-                  ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar apiarios...',
+                hintStyle: GoogleFonts.poppins(fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: colorNaranja),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-              )
-              .animate()
-              .fadeIn(delay: 200.ms, duration: 600.ms)
-              .slideY(begin: -0.2, end: 0),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterApiarios();
+                          setState(() {});
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) {
+                _filterApiarios();
+                setState(() {});
+              },
+            ),
+          ).animate().fadeIn(delay: 300.ms),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    bool isDesktop,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: isDesktop ? 28 : 24)
-            .animate(onPlay: (controller) => controller.repeat(reverse: true))
-            .scale(
-              begin: Offset(1, 1),
-              end: Offset(1.1, 1.1),
-              duration: 2000.ms,
-            ),
-        SizedBox(height: 8),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: isDesktop ? 20 : 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: isDesktop ? 12 : 10,
-            color: Colors.black54,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildApiariosList(bool isDesktop, bool isTablet) {
+  Widget _buildApiariosList(bool isTablet) {
     if (filteredApiarios.isEmpty) {
-      return _buildEmptyState();
+      return EmptyStateWidget(
+        icon: Icons.location_off,
+        title: _searchController.text.isNotEmpty
+            ? 'No se encontraron apiarios'
+            : 'No hay apiarios configurados',
+        subtitle: _searchController.text.isNotEmpty
+            ? 'Intenta con otros términos de búsqueda'
+            : 'Agrega tu primer apiario para comenzar',
+        actionText: _searchController.text.isEmpty ? 'Crear Apiario' : null,
+        onAction: _searchController.text.isEmpty
+            ? () => _showApiarioDialog()
+            : null,
+        color: colorNaranja,
+      );
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16),
-      child: isDesktop ? _buildDesktopGrid() : _buildMobileList(isTablet),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.location_off, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            _searchController.text.isNotEmpty
-                ? 'No se encontraron apiarios'
-                : 'No hay apiarios configurados',
-            style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]),
-          ),
-          SizedBox(height: 8),
-          Text(
-            _searchController.text.isNotEmpty
-                ? 'Intenta con otros términos de búsqueda'
-                : 'Agrega tu primer apiario para comenzar',
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: isTablet ? _buildDesktopGrid() : _buildMobileList(),
     );
   }
 
@@ -379,7 +253,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1.5,
+        childAspectRatio: 1.3,
       ),
       itemCount: filteredApiarios.length,
       itemBuilder: (context, index) {
@@ -388,12 +262,12 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
     );
   }
 
-  Widget _buildMobileList(bool isTablet) {
+  Widget _buildMobileList() {
     return ListView.builder(
       itemCount: filteredApiarios.length,
       itemBuilder: (context, index) {
         return Padding(
-          padding: EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.only(bottom: 8),
           child: _buildApiarioCard(filteredApiarios[index], index, false),
         );
       },
@@ -402,7 +276,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
 
   Widget _buildApiarioCard(Apiario apiario, int index, bool isDesktop) {
     return Card(
-          elevation: 4,
+          elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -410,7 +284,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
             onTap: () => _showApiarioDetails(apiario),
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: EdgeInsets.all(isDesktop ? 20 : 16),
+              padding: EdgeInsets.all(isDesktop ? 16 : 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 gradient: LinearGradient(
@@ -425,7 +299,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                   Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(12),
+                        padding: EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: colorAmarillo.withOpacity(0.2),
                           shape: BoxShape.circle,
@@ -433,7 +307,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                         child: Icon(
                           Icons.location_on,
                           color: colorNaranja,
-                          size: 24,
+                          size: isDesktop ? 20 : 18,
                         ),
                       ),
                       SizedBox(width: 12),
@@ -444,15 +318,17 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                             Text(
                               apiario.nombre,
                               style: GoogleFonts.poppins(
-                                fontSize: isDesktop ? 18 : 16,
+                                fontSize: isDesktop ? 16 : 14,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               apiario.ubicacion,
                               style: GoogleFonts.poppins(
-                                fontSize: isDesktop ? 14 : 12,
+                                fontSize: isDesktop ? 12 : 11,
                                 color: Colors.black54,
                               ),
                               maxLines: 2,
@@ -480,29 +356,49 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                             value: 'edit',
                             child: Row(
                               children: [
-                                Icon(Icons.edit, color: colorNaranja),
+                                Icon(Icons.edit, color: colorNaranja, size: 18),
                                 SizedBox(width: 8),
-                                Text('Editar'),
+                                Text('Editar', style: GoogleFonts.poppins()),
                               ],
                             ),
                           ),
                           PopupMenuItem(
                             value: 'colmenas',
-                            child: Row(
-                              children: [
-                                Icon(Icons.hive, color: colorAmarillo),
-                                SizedBox(width: 8),
-                                Text('Ver Colmenas'),
-                              ],
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pop(
+                                  context,
+                                ); // Cierra el menú emergente
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ColmenasManagementScreen(),
+                                  ), // Reemplaza con tu widget de destino
+                                );
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.hive,
+                                    color: colorAmarillo,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Ver Colmenas',
+                                    style: GoogleFonts.poppins(),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           PopupMenuItem(
                             value: 'delete',
                             child: Row(
                               children: [
-                                Icon(Icons.delete, color: Colors.red),
+                                Icon(Icons.delete, color: Colors.red, size: 18),
                                 SizedBox(width: 8),
-                                Text('Eliminar'),
+                                Text('Eliminar', style: GoogleFonts.poppins()),
                               ],
                             ),
                           ),
@@ -512,21 +408,21 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                   ),
 
                   if (isDesktop) ...[
-                    SizedBox(height: 16),
+                    SizedBox(height: 12),
                     Divider(),
                     SizedBox(height: 8),
                     Row(
                       children: [
                         Icon(
                           Icons.calendar_today,
-                          size: 16,
+                          size: 14,
                           color: Colors.grey,
                         ),
                         SizedBox(width: 4),
                         Text(
                           'Creado: ${apiario.fechaCreacion?.toString().split(' ')[0] ?? 'N/A'}',
                           style: GoogleFonts.poppins(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: Colors.grey[600],
                           ),
                         ),
@@ -561,13 +457,40 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          isEditing ? 'Editar Apiario' : 'Nuevo Apiario',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [colorNaranja, colorAmarillo]),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isEditing ? Icons.edit : Icons.add_circle,
+                color: Colors.white,
+                size: 24,
+              ),
+              SizedBox(width: 12),
+              Text(
+                isEditing ? 'Editar Apiario' : 'Nuevo Apiario',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
         ),
+        titlePadding: EdgeInsets.zero,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            SizedBox(height: 16),
             TextField(
               controller: _nombreController,
               decoration: InputDecoration(
@@ -580,7 +503,9 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: colorAmarillo, width: 2),
                 ),
+                prefixIcon: Icon(Icons.location_city, color: colorNaranja),
               ),
+              style: GoogleFonts.poppins(),
             ),
             SizedBox(height: 16),
             TextField(
@@ -595,31 +520,71 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: colorAmarillo, width: 2),
                 ),
+                prefixIcon: Icon(Icons.place, color: colorNaranja),
               ),
+              style: GoogleFonts.poppins(),
               maxLines: 2,
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancelar',
-              style: GoogleFonts.poppins(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => _saveApiario(apiario),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorVerde,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(
-              isEditing ? 'Actualizar' : 'Crear',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: Colors.grey[300]!),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: () => _saveApiario(apiario),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorVerde,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.save, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          isEditing ? 'Actualizar' : 'Crear',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+        actionsPadding: EdgeInsets.zero,
       ),
     );
   }
@@ -628,15 +593,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
   Future<void> _saveApiario(Apiario? existingApiario) async {
     if (_nombreController.text.trim().isEmpty ||
         _ubicacionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Por favor completa todos los campos',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Por favor completa todos los campos', Colors.red);
       return;
     }
 
@@ -645,71 +602,32 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
 
       if (existingApiario != null) {
         // Actualizar apiario existente
-        final updatedApiario = existingApiario.copyWith(
-          nombre: _nombreController.text.trim(),
-          ubicacion: _ubicacionController.text.trim(),
+        final updatedData = {
+          'name': _nombreController.text.trim(),
+          'location': _ubicacionController.text.trim(),
+        };
+
+        await EnhancedApiService.actualizarApiario(
+          existingApiario.id,
+          updatedData,
         );
 
-        await dbService.updateApiario(updatedApiario);
-
-        if (isConnected) {
-          try {
-            await ApiService.actualizarApiario(
-              updatedApiario.id,
-              updatedApiario.toJson(),
-            );
-          } catch (e) {
-            debugPrint("⚠️ Error al sincronizar actualización: $e");
-          }
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Apiario actualizado correctamente',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: colorVerde,
-          ),
-        );
+        _showSnackBar('Apiario actualizado correctamente', colorVerde);
       } else {
         // Crear nuevo apiario
-        final newApiario = Apiario(
-          id: DateTime.now().millisecondsSinceEpoch,
-          nombre: _nombreController.text.trim(),
-          ubicacion: _ubicacionController.text.trim(),
-          fechaCreacion: DateTime.now(),
-        );
+        final newData = {
+          'name': _nombreController.text.trim(),
+          'location': _ubicacionController.text.trim(),
+        };
 
-        await dbService.insertApiario(newApiario);
+        await EnhancedApiService.crearApiario(newData);
 
-        if (isConnected) {
-          try {
-            await ApiService.crearApiario(newApiario.toJson());
-          } catch (e) {
-            debugPrint("⚠️ Error al sincronizar creación: $e");
-          }
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Apiario creado correctamente',
-              style: GoogleFonts.poppins(),
-            ),
-            backgroundColor: colorVerde,
-          ),
-        );
+        _showSnackBar('Apiario creado correctamente', colorVerde);
       }
 
       await _loadApiarios();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al guardar: $e', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error al guardar: $e', Colors.red);
     }
   }
 
@@ -718,6 +636,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Confirmar Eliminación',
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
@@ -755,34 +674,13 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
     try {
       Navigator.pop(context);
 
-      await dbService.deleteApiario(apiario.id);
+      await EnhancedApiService.eliminarApiario(apiario.id);
 
-      if (isConnected) {
-        try {
-          await ApiService.eliminarApiario(apiario.id);
-        } catch (e) {
-          debugPrint("⚠️ Error al sincronizar eliminación: $e");
-        }
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Apiario eliminado correctamente',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: colorVerde,
-        ),
-      );
+      _showSnackBar('Apiario eliminado correctamente', colorVerde);
 
       await _loadApiarios();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al eliminar: $e', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error al eliminar: $e', Colors.red);
     }
   }
 
@@ -791,6 +689,7 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           apiario.nombre,
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
@@ -810,7 +709,10 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar'),
+            child: Text(
+              'Cerrar',
+              style: GoogleFonts.poppins(color: colorNaranja),
+            ),
           ),
         ],
       ),
@@ -833,52 +735,31 @@ class _ApiariosManagementScreenState extends State<ApiariosManagementScreen>
 
   // Mostrar colmenas del apiario
   void _showColmenas(Apiario apiario) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Función de gestión de colmenas en desarrollo',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: Colors.blue,
-      ),
-    );
+    _showSnackBar('Función de gestión de colmenas en desarrollo', Colors.blue);
   }
 
   // Sincronizar datos
   Future<void> _syncData() async {
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Sincronizando apiarios...",
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: colorAmarillo,
-        ),
-      );
+      _showSnackBar("Sincronizando apiarios...", colorAmarillo);
 
       await _checkConnection();
       await _loadApiarios();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Apiarios sincronizados correctamente",
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: colorVerde,
-        ),
-      );
+      _showSnackBar("Apiarios sincronizados correctamente", colorVerde);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Error en sincronización: $e",
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar("Error en sincronización: $e", Colors.red);
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 }

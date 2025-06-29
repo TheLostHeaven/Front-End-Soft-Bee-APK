@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sotfbee/features/admin/history/models/monitoreo_models.dart';
 import 'package:sotfbee/features/admin/history/service/local_storage_service.dart';
+import 'package:sotfbee/features/auth/data/datasources/auth_local_datasource.dart'; // Add this import
 
 class ApiService {
   static const String baseUrl =
@@ -12,17 +13,21 @@ class ApiService {
   final LocalStorageService _localStorage = LocalStorageService();
 
   // Headers para Apiary
-  Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_APIARY_TOKEN', // Token de Apiary
-  };
+  Future<Map<String, String>> get _headers async {
+    final token = await AuthStorage.getToken();
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   // Obtener todos los monitoreos
   Future<List<MonitoreoModel>> getMonitoreos() async {
     try {
       // Intentar obtener datos del servidor
       final response = await http
-          .get(Uri.parse('$baseUrl/monitoreos'), headers: _headers)
+          .get(Uri.parse('$baseUrl/monitoreos'), headers: await _headers)
           .timeout(Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -51,7 +56,7 @@ class ApiService {
       final response = await http
           .get(
             Uri.parse('$baseUrl/apiarios/$apiarioId/monitoreos'),
-            headers: _headers,
+            headers: await _headers,
           )
           .timeout(Duration(seconds: 10));
 
@@ -74,7 +79,7 @@ class ApiService {
       final response = await http
           .post(
             Uri.parse('$baseUrl/monitoreos'),
-            headers: _headers,
+            headers: await _headers,
             body: json.encode(monitoreo.toJson()),
           )
           .timeout(Duration(seconds: 10));
@@ -114,7 +119,7 @@ class ApiService {
       final response = await http
           .get(
             Uri.parse('$baseUrl/apiarios/$apiarioId/questions'),
-            headers: _headers,
+            headers: await _headers,
           )
           .timeout(Duration(seconds: 10));
 
@@ -147,7 +152,7 @@ class ApiService {
         try {
           final response = await http.post(
             Uri.parse('$baseUrl/monitoreos'),
-            headers: _headers,
+            headers: await _headers,
             body: json.encode(monitoreo.toJson()),
           );
 
@@ -178,7 +183,7 @@ class ApiService {
   Future<bool> checkConnectivity() async {
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/health'), headers: _headers)
+          .get(Uri.parse('$baseUrl/health'), headers: await _headers)
           .timeout(Duration(seconds: 5));
 
       return response.statusCode == 200;
@@ -191,7 +196,7 @@ class ApiService {
   Future<Map<String, dynamic>> getSystemStats() async {
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/stats'), headers: _headers)
+          .get(Uri.parse('$baseUrl/stats'), headers: await _headers)
           .timeout(Duration(seconds: 10));
 
       if (response.statusCode == 200) {

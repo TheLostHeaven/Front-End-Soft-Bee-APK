@@ -233,21 +233,15 @@ class Colmena {
   final int id;
   final int numeroColmena;
   final int idApiario;
-  final bool activa;
-  final DateTime? fechaCreacion;
-  final DateTime? fechaUltimaInspeccion;
-  final String? estadoReina;
   final Map<String, dynamic>? metadatos;
+  final DateTime? fechaCreacion;
 
   Colmena({
     required this.id,
     required this.numeroColmena,
     required this.idApiario,
-    this.activa = true,
-    this.fechaCreacion,
-    this.fechaUltimaInspeccion,
-    this.estadoReina,
     this.metadatos,
+    this.fechaCreacion,
   });
 
   factory Colmena.fromJson(Map<String, dynamic> json) {
@@ -255,25 +249,18 @@ class Colmena {
       id: json['id'] ?? 0,
       numeroColmena: json['numero_colmena'] ?? json['hive_number'] ?? 0,
       idApiario: json['id_apiario'] ?? json['apiary_id'] ?? 0,
-      activa: json['activa'] ?? json['active'] ?? true,
+      metadatos: json['metadatos'] ?? json['metadata'],
       fechaCreacion: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
-      fechaUltimaInspeccion: json['last_inspection'] != null
-          ? DateTime.tryParse(json['last_inspection'])
-          : null,
-      estadoReina: json['queen_status'],
-      metadatos: json['metadatos'] ?? json['metadata'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'numero_colmena': numeroColmena,
-      'id_apiario': idApiario,
-      'active': activa,
-      'queen_status': estadoReina,
+      'hive_number': numeroColmena,
+      'apiary_id': idApiario,
       'metadata': metadatos,
     };
   }

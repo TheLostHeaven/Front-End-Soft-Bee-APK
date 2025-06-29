@@ -9,14 +9,14 @@ class InventoryService {
   factory InventoryService() => _instance;
   InventoryService._internal();
 
-  // Obtener todos los items del inventario
+  // Obtener todos los items del inventario por apiario
   Future<List<InventoryItem>> getInventoryItems({int? apiaryId}) async {
     try {
       final int targetApiaryId = apiaryId ?? ApiConfig.defaultApiaryId;
       final response = await http
           .get(
             Uri.parse(
-              '${ApiConfig.baseUrl}/inventory',
+              '${ApiConfig.baseUrl}/apiaries/$targetApiaryId/inventory',
             ),
             headers: ApiConfig.headers,
           )
@@ -37,12 +37,12 @@ class InventoryService {
     }
   }
 
-  // Crear un nuevo item
+  // Crear un nuevo item en un apiario
   Future<int> createInventoryItem(InventoryItem item) async {
     try {
       final response = await http
           .post(
-            Uri.parse('${ApiConfig.baseUrl}/inventory'),
+            Uri.parse('${ApiConfig.baseUrl}/apiaries/${item.apiaryId}/inventory'),
             headers: ApiConfig.headers,
             body: json.encode(item.toCreateJson()),
           )

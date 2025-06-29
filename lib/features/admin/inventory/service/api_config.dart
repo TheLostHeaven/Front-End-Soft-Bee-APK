@@ -1,7 +1,8 @@
 class ApiConfig {
   // Cambia esta URL por la de tu servidor Flask
   static const String baseUrl =
-      'https://softbee-back-end.onrender.com/api'; // Para desarrollo local
+    'https://softbee-back-end.onrender.com/api';
+      // 'https://softbee-back-end.onrender.com/api'; // Para desarrollo local
   // static const String baseUrl = 'http://10.0.2.2:5000'; // Para emulador Android
   // static const String baseUrl = 'https://tu-servidor.com'; // Para producción
 
