@@ -9,7 +9,6 @@ import 'package:sotfbee/features/auth/presentation/pages/confirm_reset_page.dart
 import 'package:sotfbee/features/auth/presentation/pages/login_page.dart';
 import 'package:sotfbee/features/auth/presentation/pages/register_page.dart';
 import 'package:sotfbee/features/auth/presentation/pages/reset_password_page.dart';
-import 'package:sotfbee/features/presentation/Landing_Page.dart';
 
 // Hive
 import 'package:hive_flutter/hive_flutter.dart';
@@ -87,19 +86,13 @@ class SoftBeeApp extends StatelessWidget {
 
         switch (settings.name) {
           case '/':
-            return MaterialPageRoute(builder: (context) => const LandingPage());
-          case '/login':
             return MaterialPageRoute(builder: (context) => const LoginPage());
           case '/register':
             return MaterialPageRoute(builder: (context) => RegisterPage());
           case '/dashboard':
             return MaterialPageRoute(builder: (context) => MenuScreen());
           case '/forgot-password':
-            return MaterialPageRoute(
-              builder: (context) => const ForgotPasswordPage(),
-            );
-          default:
-            return MaterialPageRoute(builder: (context) => const LandingPage());
+            return MaterialPageRoute(builder: (context) => const ForgotPasswordPage());
         }
       },
     );
