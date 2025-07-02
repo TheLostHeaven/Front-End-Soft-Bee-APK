@@ -1,132 +1,482 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:sotfbee/features/auth/data/datasources/user_service.dart';
 import 'package:sotfbee/features/auth/data/models/user_model.dart';
 
 class UserManagementPage extends StatefulWidget {
   final UserProfile? user;
-
   const UserManagementPage({Key? key, this.user}) : super(key: key);
 
   @override
   _UserManagementPageState createState() => _UserManagementPageState();
 }
 
-class _UserManagementPageState extends State<UserManagementPage> {
-  List<UserProfile> _users = [];
+class _UserManagementPageState extends State<UserManagementPage>
+    with SingleTickerProviderStateMixin {
+  UserProfile? currentUser;
   bool _isLoading = true;
   String? _errorMessage;
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
-  UserProfile? get currentUser => widget.user;
+  // Colores del tema
+  static const Color primaryColor = Color(0xFFFFC107);
+  static const Color secondaryColor = Color(0xFFFF8F00);
+  static const Color backgroundColor = Color(0xFFF5F5F5);
+  static const Color cardColor = Colors.white;
+  static const Color textPrimary = Color(0xFF212121);
+  static const Color textSecondary = Color(0xFF757575);
 
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _loadCurrentUser();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadUsers() async {
-    if (!mounted) return;
-
+  Future<void> _loadCurrentUser() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final users = await UserService.getAllUsers();
-      if (!mounted) return;
-
+      final user = await UserService.getCurrentUserProfile();
       setState(() {
-        _users = users;
+        currentUser = user;
         _isLoading = false;
       });
+      _animationController.forward();
     } catch (e) {
-      if (!mounted) return;
-
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cargar usuarios: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
-  List<UserProfile> get _filteredUsers {
-    if (_searchQuery.isEmpty) return _users;
-    final query = _searchQuery.toLowerCase();
-    return _users.where((user) {
-      return user.name.toLowerCase().contains(query) ||
-          user.email.toLowerCase().contains(query) ||
-          user.phone.toLowerCase().contains(query) ||
-          user.username.toLowerCase().contains(query);
-    }).toList();
+  Future<void> _editPhoto() async {
+    final XFile? image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (image != null && currentUser != null) {
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: primaryColor),
+        ),
+      );
+
+      final result = await UserService.updateProfilePicture(
+        userId: currentUser!.id,
+        file: image,
+      );
+
+      Navigator.pop(context); // Cerrar loading
+
+      if (result['success']) {
+        await _loadCurrentUser();
+        _showSnackBar('Foto de perfil actualizada', isSuccess: true);
+      } else {
+        _showSnackBar(result['message'] ?? 'Error al subir imagen', isSuccess: false);
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {required bool isSuccess}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isSuccess ? Icons.check_circle : Icons.error,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Gestión de Usuarios', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.amber,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUsers,
-            tooltip: 'Recargar usuarios',
+      backgroundColor: backgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          SliverToBoxAdapter(
+            child: _isLoading
+                ? _buildLoadingState()
+                : currentUser != null
+                    ? _buildProfileContent()
+                    : _buildErrorState(),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (currentUser != null) _buildCurrentUserCard(),
-            _buildSearchBar(),
-            Expanded(child: _buildUserList()),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateUserDialog,
-        backgroundColor: Colors.amber,
-        child: const Icon(Icons.add, color: Colors.white),
-        tooltip: 'Crear nuevo usuario',
       ),
     );
   }
 
-  Widget _buildCurrentUserCard() {
-    final user = currentUser!;
-    return Card(
-      margin: const EdgeInsets.all(16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: primaryColor,
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          'Mi Perfil',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [primaryColor, secondaryColor],
+            ),
+          ),
+        ),
+      ),
+      elevation: 0,
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: primaryColor),
+            SizedBox(height: 16),
+            Text('Cargando perfil...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage ?? 'Error desconocido',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(color: textSecondary),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadCurrentUser,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileContent() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundImage: _getProfileImage(user.profilePictureUrl),
-            ),
-            const SizedBox(height: 16),
-            ..._buildUserDetails(user),
+            _buildProfileHeader(),
+            const SizedBox(height: 24),
+            _buildUserInfoCard(),
+            const SizedBox(height: 24),
+            _buildActionButtons(),
+            const SizedBox(height: 24),
+            if (currentUser!.apiaries.isNotEmpty) _buildApiariesCard(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 60,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: _getProfileImage(currentUser!.profilePictureUrl),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                    onPressed: _editPhoto,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            currentUser!.name,
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '@${currentUser!.username}',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Información Personal',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildInfoItem(Icons.email_outlined, 'Email', currentUser!.email),
+          _buildInfoItem(Icons.phone_outlined, 'Teléfono', currentUser!.phone),
+          _buildInfoItem(Icons.badge_outlined, 'ID', currentUser!.id.toString()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: primaryColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => _showEditUserDialog(currentUser!),
+            icon: const Icon(Icons.edit, color: Colors.white),
+            label: Text(
+              'Editar Perfil',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildApiariesCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.hive, color: primaryColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Mis Apiarios',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: currentUser!.apiaries.map((apiary) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: primaryColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  apiary.name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: primaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -138,264 +488,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
     return NetworkImage(url);
   }
 
-  List<Widget> _buildUserDetails(UserProfile user) {
-    return [
-      _buildDetailRow('Nombre:', user.name),
-      _buildDetailRow('Email:', user.email),
-      _buildDetailRow('Teléfono:', user.phone),
-      _buildDetailRow('Usuario:', user.username),
-      _buildDetailRow('ID:', user.id.toString()),
-      if (user.apiaries.isNotEmpty)
-        _buildDetailRow(
-          'Apiarios:',
-          user.apiaries.map((a) => a.name).join(', '),
-        ),
-    ];
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(value, style: GoogleFonts.poppins(fontSize: 14)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          labelText: 'Buscar usuarios...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-              : null,
-        ),
-        onChanged: (value) => setState(() => _searchQuery = value),
-      ),
-    );
-  }
-
-  Widget _buildUserList() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_errorMessage != null) {
-      return _buildErrorWidget();
-    }
-
-    if (_filteredUsers.isEmpty) {
-      return _buildEmptyWidget();
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80),
-      itemCount: _filteredUsers.length,
-      itemBuilder: (context, index) {
-        final user = _filteredUsers[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundImage: _getProfileImage(user.profilePictureUrl),
-            ),
-            title: Text(
-              user.name,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(user.email),
-                Text(user.phone),
-                if (user.apiaries.isNotEmpty)
-                  Text('${user.apiaries.length} apiarios'),
-              ],
-            ),
-            trailing: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) => _handlePopupSelection(value, user),
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: const [
-                      Icon(Icons.edit, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('Editar'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: const [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Eliminar'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            onTap: () => _showUserDetails(user),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            'Error al cargar usuarios',
-            style: GoogleFonts.poppins(fontSize: 18),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _errorMessage ?? 'Error desconocido',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadUsers,
-            child: const Text('Reintentar'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.people_outline, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            'No se encontraron usuarios',
-            style: GoogleFonts.poppins(fontSize: 18),
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'No hay resultados para "$_searchQuery"',
-              style: GoogleFonts.poppins(),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-              child: const Text('Limpiar búsqueda'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _handlePopupSelection(String value, UserProfile user) {
-    switch (value) {
-      case 'edit':
-        _showEditUserDialog(user);
-        break;
-      case 'delete':
-        _showDeleteConfirmation(user);
-        break;
-    }
-  }
-
-  void _showUserDetails(UserProfile user) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: const Text('Detalles de usuario'),
-            backgroundColor: Colors.amber,
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _buildUserDetails(user),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCreateUserDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => _UserFormDialog(
-        title: 'Crear Usuario',
-        onSubmit: (data) async {
-          final result = await UserService.createUser(
-            nombre: data['nombre'] ?? '',
-            username: data['username'] ?? '',
-            email: data['email'] ?? '',
-            phone: data['phone'] ?? '',
-            password: data['password'] ?? '',
-          );
-
-          if (result['success'] == true) {
-            _loadUsers();
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Usuario creado exitosamente'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result['message'] ?? 'Error al crear usuario'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-
   void _showEditUserDialog(UserProfile user) {
     showDialog(
       context: context,
@@ -405,6 +497,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
           'nombre': user.name,
           'email': user.email,
           'phone': user.phone,
+          'username': user.username,
         },
         onSubmit: (data) async {
           final result = await UserService.updateUser(
@@ -412,86 +505,22 @@ class _UserManagementPageState extends State<UserManagementPage> {
             nombre: data['nombre'] ?? '',
             email: data['email'] ?? '',
             phone: data['phone'] ?? '',
+            username: data['username'] ?? '',
           );
 
           if (result['success'] == true) {
-            _loadUsers();
+            await _loadCurrentUser();
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Usuario actualizado exitosamente'),
-                backgroundColor: Colors.green,
-              ),
-            );
+            _showSnackBar('Usuario actualizado exitosamente', isSuccess: true);
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  result['message'] ?? 'Error al actualizar usuario',
-                ),
-                backgroundColor: Colors.red,
-              ),
+            _showSnackBar(
+              result['message'] ?? 'Error al actualizar usuario',
+              isSuccess: false,
             );
           }
         },
       ),
     );
-  }
-
-  void _showDeleteConfirmation(UserProfile user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar eliminación'),
-        content: Text(
-          '¿Estás seguro de eliminar a ${user.name}? Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _deleteUser(user.id);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteUser(int userId) async {
-    try {
-      final result = await UserService.deleteUser(userId);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['success'] == true
-                ? 'Usuario eliminado exitosamente'
-                : result['message'] ?? 'Error al eliminar usuario',
-          ),
-          backgroundColor: result['success'] == true
-              ? Colors.green
-              : Colors.red,
-        ),
-      );
-
-      if (result['success'] == true) {
-        _loadUsers();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al eliminar usuario: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }
 
@@ -516,8 +545,9 @@ class __UserFormDialogState extends State<_UserFormDialog> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
   bool _isLoading = false;
+
+  static const Color primaryColor = Color(0xFFFFC107);
 
   @override
   void initState() {
@@ -526,6 +556,7 @@ class __UserFormDialogState extends State<_UserFormDialog> {
       _nameController.text = widget.initialData!['nombre'] ?? '';
       _emailController.text = widget.initialData!['email'] ?? '';
       _phoneController.text = widget.initialData!['phone'] ?? '';
+      _usernameController.text = widget.initialData!['username'] ?? '';
     }
   }
 
@@ -535,118 +566,170 @@ class __UserFormDialogState extends State<_UserFormDialog> {
     _usernameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.initialData != null;
-
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nombre completo'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Este campo es requerido'
-                    : null,
-              ),
-              if (!isEditing) ...[
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre de usuario',
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Este campo es requerido'
-                      : null,
+                  child: const Icon(Icons.edit, color: primaryColor),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  widget.title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Correo electrónico',
+            ),
+            const SizedBox(height: 24),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _buildTextField(
+                    controller: _nameController,
+                    label: 'Nombre completo',
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _usernameController,
+                    label: 'Usuario',
+                    icon: Icons.alternate_email,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _emailController,
+                    label: 'Correo electrónico',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Este campo es requerido';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Ingresa un correo válido';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _phoneController,
+                    label: 'Teléfono',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Cancelar',
+                      style: GoogleFonts.poppins(color: Colors.grey[600]),
+                    ),
+                  ),
                 ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return 'Este campo es requerido';
-                  if (!value.contains('@')) return 'Ingresa un email válido';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Teléfono'),
-                keyboardType: TextInputType.phone,
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Este campo es requerido'
-                    : null,
-              ),
-              if (!isEditing) ...[
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Contraseña'),
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty)
-                      return 'Este campo es requerido';
-                    if (value.length < 8) return 'Mínimo 8 caracteres';
-                    return null;
-                  },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Guardar',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
                 ),
               ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator ??
+          (value) => value == null || value.isEmpty ? 'Este campo es requerido' : null,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
         ),
-        ElevatedButton(
-          onPressed: _isLoading ? null : _submitForm,
-          child: _isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : Text(isEditing ? 'Actualizar' : 'Crear'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
-      ],
+        labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
+      ),
     );
   }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState != null && _formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-
       try {
         final formData = {
           'nombre': _nameController.text.trim(),
-          if (!(widget.initialData?.containsKey('username') ?? false))
-            'username': _usernameController.text.trim().toLowerCase(),
-          'email': _emailController.text.trim().toLowerCase(),
+          'username': _usernameController.text.trim(),
+          'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
-          if (_passwordController.text.isNotEmpty)
-            'password': _passwordController.text.trim(),
         };
-
         await widget.onSubmit(formData);
       } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }

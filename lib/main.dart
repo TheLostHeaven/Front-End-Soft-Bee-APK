@@ -1,7 +1,4 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:provider/provider.dart';
 import 'package:sotfbee/core/widgets/dashboard_menu.dart';
 import 'package:sotfbee/features/admin/history/controllers/monitoreo_controllers.dart';
@@ -14,7 +11,6 @@ import 'package:sotfbee/features/auth/presentation/pages/reset_password_page.dar
 import 'package:hive_flutter/hive_flutter.dart';
 
 // Opcional: para otras plataformas
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sotfbee/core/services/connectivity_service.dart';
 
 void main() async {
@@ -23,12 +19,6 @@ void main() async {
   // Inicializa Hive para todas las plataformas
   await Hive.initFlutter();
 
-  // FFI initialization is now handled in LocalDBService to avoid conflicts.
-
-  // Configura la estrategia de URLs limpias en Web
-  // setUrlStrategy(PathUrlStrategy());
-
-  // Ejecuta la app
   runApp(
     MultiProvider(
       providers: [

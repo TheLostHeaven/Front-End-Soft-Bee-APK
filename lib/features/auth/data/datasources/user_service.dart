@@ -3,63 +3,46 @@ import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:sotfbee/features/auth/data/models/user_model.dart';
 import 'package:sotfbee/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 
 class UserService {
-  static const String _baseUrl = 'https://softbee-back-end.onrender.com/api';
+  static const String _baseUrl = 'https://softbee-back-end-1.onrender.com/api';
   static const Duration _timeoutDuration = Duration(seconds: 30);
 
   // Obtener el perfil del usuario actual
   static Future<UserProfile?> getCurrentUserProfile() async {
     try {
       final token = await AuthStorage.getToken();
-      if (token == null) {
-        developer.log("No se encontró token en el almacenamiento", error: true);
-        throw Exception("No autenticado - Token no disponible");
-      }
-
-      developer.log("Obteniendo perfil del usuario actual...");
+      if (token == null) throw Exception("Token no disponible");
 
       final response = await http
           .get(Uri.parse('$_baseUrl/users/me'), headers: _buildHeaders(token))
           .timeout(_timeoutDuration);
 
-      developer.log(
-        "Respuesta de perfil: ${response.statusCode} - ${response.body}",
-      );
-
+      developer.log("Perfil: ${response.statusCode} ${response.body}");
       return _handleUserResponse(response);
     } catch (e) {
-      developer.log("Error al obtener perfil: $e", error: true);
+      developer.log("Error perfil: $e", error: true);
       rethrow;
     }
   }
 
-  // Obtener todos los usuarios (solo admin)
+  // Obtener todos los usuarios
   static Future<List<UserProfile>> getAllUsers() async {
-    try {
-      final token = await AuthStorage.getToken();
-      if (token == null)
-        throw Exception("No autenticado - Token no disponible");
+    final token = await AuthStorage.getToken();
+    if (token == null) throw Exception("Token no disponible");
 
-      developer.log("Obteniendo todos los usuarios...");
+    final response = await http
+        .get(Uri.parse('$_baseUrl/users'), headers: _buildHeaders(token))
+        .timeout(_timeoutDuration);
 
-      final response = await http
-          .get(Uri.parse('$_baseUrl/users'), headers: _buildHeaders(token))
-          .timeout(_timeoutDuration);
-
-      developer.log(
-        "Respuesta de usuarios: ${response.statusCode} - ${response.body}",
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> usersJson = jsonDecode(response.body);
-        return usersJson.map((json) => UserProfile.fromJson(json)).toList();
-      } else {
-        throw _handleErrorResponse(response);
-      }
-    } catch (e) {
-      developer.log("Error al obtener usuarios: $e", error: true);
-      rethrow;
+    if (response.statusCode == 200) {
+      final List<dynamic> usersJson = jsonDecode(response.body);
+      return usersJson.map((json) => UserProfile.fromJson(json)).toList();
+    } else {
+      throw _handleErrorResponse(response);
     }
   }
 
@@ -71,107 +54,117 @@ class UserService {
     required String phone,
     required String password,
   }) async {
-    try {
-      final token = await AuthStorage.getToken();
-      if (token == null)
-        throw Exception("No autenticado - Token no disponible");
+    final token = await AuthStorage.getToken();
+    if (token == null) throw Exception("Token no disponible");
 
-      final userData = {
-        'nombre': nombre.trim(),
-        'username': username.trim().toLowerCase(),
-        'email': email.trim().toLowerCase(),
-        'phone': phone.trim(),
-        'password': password.trim(),
-      };
+    final userData = {
+      'nombre': nombre.trim(),
+      'username': username.trim().toLowerCase(),
+      'email': email.trim().toLowerCase(),
+      'phone': phone.trim(),
+      'password': password.trim(),
+    };
 
-      developer.log("Creando usuario: ${jsonEncode(userData)}");
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/users'),
+          headers: _buildHeaders(token),
+          body: jsonEncode(userData),
+        )
+        .timeout(_timeoutDuration);
 
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/users'),
-            headers: _buildHeaders(token),
-            body: jsonEncode(userData),
-          )
-          .timeout(_timeoutDuration);
-
-      developer.log(
-        "Respuesta de creación: ${response.statusCode} - ${response.body}",
-      );
-
-      return _handleStandardResponse(response);
-    } catch (e) {
-      developer.log("Error al crear usuario: $e", error: true);
-      rethrow;
-    }
+    return _handleStandardResponse(response);
   }
 
-  // Actualizar usuario
+  // Actualizar datos del usuario
   static Future<Map<String, dynamic>> updateUser({
     required int userId,
     required String nombre,
+    required String username,
     required String email,
     required String phone,
   }) async {
-    try {
-      final token = await AuthStorage.getToken();
-      if (token == null)
-        throw Exception("No autenticado - Token no disponible");
+    final token = await AuthStorage.getToken();
+    if (token == null) throw Exception("Token no disponible");
 
-      final userData = {
-        'nombre': nombre.trim(),
-        'email': email.trim().toLowerCase(),
-        'phone': phone.trim(),
-      };
+    final userData = {
+      'nombre': nombre.trim(),
+      'username': username.trim(),
+      'email': email.trim().toLowerCase(),
+      'phone': phone.trim(),
+    };
 
-      developer.log("Actualizando usuario $userId: ${jsonEncode(userData)}");
+    final response = await http
+        .put(
+          Uri.parse('$_baseUrl/users/$userId'),
+          headers: _buildHeaders(token),
+          body: jsonEncode(userData),
+        )
+        .timeout(_timeoutDuration);
 
-      final response = await http
-          .put(
-            Uri.parse('$_baseUrl/users/$userId'),
-            headers: _buildHeaders(token),
-            body: jsonEncode(userData),
-          )
-          .timeout(_timeoutDuration);
+    return _handleStandardResponse(response);
+  }
 
-      developer.log(
-        "Respuesta de actualización: ${response.statusCode} - ${response.body}",
+  // 🔧 Subir foto de perfil corregido
+  static Future<Map<String, dynamic>> updateProfilePicture({
+    required int userId,
+    required XFile file,
+  }) async {
+    final token = await AuthStorage.getToken();
+    if (token == null) throw Exception("Token no disponible");
+
+    final uri = Uri.parse('$_baseUrl/users/$userId/profile-picture');
+    final request = http.MultipartRequest('PUT', uri);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    if (kIsWeb) {
+      final bytes = await file.readAsBytes();
+      final multipartFile = http.MultipartFile.fromBytes(
+        'file', // ✅ CORREGIDO: debe ser "file"
+        bytes,
+        filename: file.name,
+        contentType: MediaType('image', 'jpeg'),
       );
+      request.files.add(multipartFile);
+    } else {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file', // ✅ CORREGIDO: debe ser "file"
+          file.path,
+        ),
+      );
+    }
 
-      return _handleStandardResponse(response);
-    } catch (e) {
-      developer.log("Error al actualizar usuario: $e", error: true);
-      rethrow;
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': 'Imagen actualizada correctamente'};
+    } else {
+      final responseBody = jsonDecode(response.body);
+      return {
+        'success': false,
+        'message': responseBody['message'] ?? 'Error al subir imagen',
+      };
     }
   }
 
   // Eliminar usuario
   static Future<Map<String, dynamic>> deleteUser(int userId) async {
-    try {
-      final token = await AuthStorage.getToken();
-      if (token == null)
-        throw Exception("No autenticado - Token no disponible");
+    final token = await AuthStorage.getToken();
+    if (token == null) throw Exception("Token no disponible");
 
-      developer.log("Eliminando usuario ID: $userId");
+    final response = await http
+        .delete(
+          Uri.parse('$_baseUrl/users/$userId'),
+          headers: _buildHeaders(token),
+        )
+        .timeout(_timeoutDuration);
 
-      final response = await http
-          .delete(
-            Uri.parse('$_baseUrl/users/$userId'),
-            headers: _buildHeaders(token),
-          )
-          .timeout(_timeoutDuration);
-
-      developer.log(
-        "Respuesta de eliminación: ${response.statusCode} - ${response.body}",
-      );
-
-      return _handleStandardResponse(response);
-    } catch (e) {
-      developer.log("Error al eliminar usuario: $e", error: true);
-      rethrow;
-    }
+    return _handleStandardResponse(response);
   }
 
-  // Métodos auxiliares privados
+  // Headers comunes
   static Map<String, String> _buildHeaders(String token) {
     return {
       'Authorization': 'Bearer $token',
@@ -180,54 +173,38 @@ class UserService {
     };
   }
 
+  // Manejo de respuestas
   static UserProfile? _handleUserResponse(http.Response response) {
-    final responseBody = jsonDecode(response.body);
+    final body = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
-      return UserProfile.fromJson(responseBody);
-    } else if (response.statusCode == 401) {
-      developer.log("Token inválido o expirado", error: true);
-      throw Exception("Sesión expirada, por favor inicia sesión nuevamente");
+      return UserProfile.fromJson(body);
     } else {
       throw _handleErrorResponse(response);
     }
   }
 
   static Map<String, dynamic> _handleStandardResponse(http.Response response) {
-    final responseBody = jsonDecode(response.body);
+    final body = jsonDecode(response.body);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return {
         'success': true,
-        'data': responseBody,
-        'message': responseBody['message'] ?? 'Operación exitosa',
-      };
-    } else if (response.statusCode == 401) {
-      developer.log("Token inválido o expirado", error: true);
-      return {
-        'success': false,
-        'error': 'Sesión expirada',
-        'message': 'Por favor inicia sesión nuevamente',
+        'data': body,
+        'message': body['message'] ?? 'Operación exitosa',
       };
     } else {
       return {
         'success': false,
-        'error': responseBody['error'] ?? 'Error en la operación',
-        'message':
-            responseBody['message'] ??
-            responseBody['detail'] ??
-            'Error desconocido (${response.statusCode})',
-        'statusCode': response.statusCode,
+        'error': body['error'] ?? 'Error desconocido',
+        'message': body['message'] ?? body['detail'] ?? '',
       };
     }
   }
 
   static Exception _handleErrorResponse(http.Response response) {
-    final responseBody = jsonDecode(response.body);
-    final errorMessage =
-        responseBody['error'] ??
-        responseBody['message'] ??
-        'Error desconocido (${response.statusCode})';
-    return Exception(errorMessage);
+    final body = jsonDecode(response.body);
+    final msg = body['error'] ?? body['message'] ?? 'Error inesperado';
+    return Exception(msg);
   }
 }

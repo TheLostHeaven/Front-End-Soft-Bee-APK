@@ -9,10 +9,10 @@ class ColmenasManagementScreen extends StatefulWidget {
   const ColmenasManagementScreen({Key? key}) : super(key: key);
 
   @override
-  _ColmenasManagementScreenState createState() => _ColmenasManagementScreenState();
+  ColmenasManagementScreenState createState() => ColmenasManagementScreenState();
 }
 
-class _ColmenasManagementScreenState extends State<ColmenasManagementScreen>
+class ColmenasManagementScreenState extends State<ColmenasManagementScreen>
     with SingleTickerProviderStateMixin {
   // Controladores
   final TextEditingController _numeroColmenaController = TextEditingController();
@@ -1735,7 +1735,7 @@ class _ColmenasManagementScreenState extends State<ColmenasManagementScreen>
   }
 
   // Sincronizar datos
-  Future<void> _syncData() async {
+  Future<void> syncData() async {
     try {
       _showSnackBar("Sincronizando colmenas...", Colors.amber[600]!);
       await _checkConnection();

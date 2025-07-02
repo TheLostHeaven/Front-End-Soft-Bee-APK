@@ -11,6 +11,8 @@ import 'package:sotfbee/features/auth/presentation/pages/user_profile_page.dart'
 import 'package:flutter_animate/flutter_animate.dart'; // Importa la página corregida
 
 class MenuScreen extends StatefulWidget {
+  const MenuScreen({super.key});
+
   @override
   _EnhancedMenuScreenState createState() => _EnhancedMenuScreenState();
 }
@@ -27,28 +29,28 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
     MenuItemData(
       title: 'Monitoreo',
       icon: Icons.monitor,
-      color: Color(0xFFFBC209),
+      color: const Color(0xFFFBC209),
       description: 'Supervisa el estado de tus colmenas en tiempo real',
-      route: MainMonitoringScreen(),
+      route: const MainMonitoringScreen(),
     ),
     MenuItemData(
       title: 'Inventario',
       icon: Icons.inventory,
-      color: Color(0xFFFFA500),
+      color: const Color(0xFFFFA500),
       description: 'Gestiona el inventario de tu apiario',
       route: GestionInventarioUpdated(),
     ),
     MenuItemData(
       title: 'Informes',
       icon: Icons.insert_chart,
-      color: Color(0xFFFFB700),
+      color: const Color(0xFFFFB700),
       description: 'Genera reportes detallados de producción',
       route: DashboardScreen(),
     ),
     MenuItemData(
       title: 'Historial',
       icon: Icons.history,
-      color: Color(0xFFFF9800),
+      color: const Color(0xFFFF9800),
       description: 'Revisa el historial de inspecciones',
       route: HistorialInspeccionesScreenModified(),
     ),
@@ -104,8 +106,8 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
               end: Alignment.bottomRight,
               colors: [
                 Colors.white,
-                Color(0xFFFFF8E1),
-                Color(0xFFFFF3C4).withOpacity(0.3),
+                const Color(0xFFFFF8E1),
+                const Color(0xFFFFF3C4).withOpacity(0.3),
               ],
             ),
           ),
@@ -145,7 +147,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      Color(0xFFFBC209).withOpacity(0.1),
+                      const Color(0xFFFBC209).withOpacity(0.1),
                       Colors.transparent,
                     ],
                   ),
@@ -162,7 +164,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      Color(0xFFFFA500).withOpacity(0.08),
+                      const Color(0xFFFFA500).withOpacity(0.08),
                       Colors.transparent,
                     ],
                   ),
@@ -177,7 +179,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
 
   Widget _buildEnhancedHeader(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       child: Column(
         children: [
           Row(
@@ -195,13 +197,13 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              Color(0xFFFBC209).withOpacity(0.3),
+                              const Color(0xFFFBC209).withOpacity(0.3),
                               Colors.transparent,
                             ],
                           ),
                         ),
                       ),
-                      Icon(
+                      const Icon(
                             Icons.hexagon_outlined,
                             color: Color(0xFFFBC209),
                             size: 40,
@@ -210,7 +212,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                           .rotate(duration: 8.seconds, curve: Curves.easeInOut),
                     ],
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -219,7 +221,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                             style: GoogleFonts.poppins(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF333333),
+                              color: const Color(0xFF333333),
                             ),
                           )
                           .animate()
@@ -234,7 +236,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                             'Sistema de Gestión Apícola',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
-                              color: Color(0xFF666666),
+                              color: const Color(0xFF666666),
                               fontWeight: FontWeight.w500,
                             ),
                           )
@@ -262,12 +264,12 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                     child: Column(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                Color(0xFFFBC209).withOpacity(0.2),
+                                const Color(0xFFFBC209).withOpacity(0.2),
                                 Colors.transparent,
                               ],
                             ),
@@ -281,11 +283,11 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                                 ? NetworkImage(
                                     'https://softbee-back-end.onrender.com/uploads/${_userProfile!.profilePicture}',
                                   )
-                                : AssetImage('images/userSoftbee.png')
+                                : const AssetImage('images/userSoftbee.png')
                                       as ImageProvider,
                           ),
                         ),
-                        SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         // Mostrar primer nombre en lugar del botón de cerrar sesión
                         if (_userProfile != null)
                           Text(
@@ -293,7 +295,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF333333),
+                              color: const Color(0xFF333333),
                             ),
                           ),
                       ],
@@ -301,7 +303,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                   ),
                   // Botón de cerrar sesión en una ubicación diferente
                   IconButton(
-                    icon: Icon(Icons.logout, size: 20, color: Colors.red),
+                    icon: const Icon(Icons.logout, size: 20, color: Colors.red),
                     tooltip: 'Cerrar sesión',
                     onPressed: () async {
                       await AuthStorage.deleteToken();
@@ -312,7 +314,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
               ),
             ],
           ),
-          SizedBox(height: 60),
+          const SizedBox(height: 60),
           Column(
             children: [
               Text(
@@ -320,18 +322,18 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFFBC209),
+                      color: const Color(0xFFFBC209),
                     ),
                   )
                   .animate()
                   .fadeIn(duration: 800.ms, delay: 300.ms)
                   .slideY(begin: 0.2, end: 0, duration: 800.ms, delay: 300.ms),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Container(
                     width: 80,
                     height: 4,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [Color(0xFFFBC209), Color(0xFFFFA500)],
                       ),
                       borderRadius: BorderRadius.circular(2),
@@ -410,7 +412,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                             return SlideTransition(
                               position:
                                   Tween<Offset>(
-                                        begin: Offset(1.0, 0.0),
+                                        begin: const Offset(1.0, 0.0),
                                         end: Offset.zero,
                                       )
                                       .chain(
@@ -444,22 +446,22 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
 
   Widget _buildDesktopStats() {
     final stats = [
-      {'label': 'Colmenas Activas', 'value': '24', 'color': Color(0xFFFBC209)},
+      {'label': 'Colmenas Activas', 'value': '24', 'color': const Color(0xFFFBC209)},
       {
         'label': 'Producción Mensual',
         'value': '156kg',
-        'color': Color(0xFFFFA500),
+        'color': const Color(0xFFFFA500),
       },
       {
         'label': 'Inspecciones Pendientes',
         'value': '3',
-        'color': Color(0xFFFFB700),
+        'color': const Color(0xFFFFB700),
       },
       {'label': 'Alertas', 'value': '1', 'color': Colors.red},
     ];
 
     return Container(
-      margin: EdgeInsets.all(9),
+      margin: const EdgeInsets.all(9),
       child: Row(
         children: stats.asMap().entries.map((entry) {
           int index = entry.key;
@@ -468,8 +470,8 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
           return Expanded(
             child:
                 Container(
-                      margin: EdgeInsets.symmetric(horizontal: 8),
-                      padding: EdgeInsets.all(20),
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(16),
@@ -480,7 +482,7 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                           BoxShadow(
                             color: (stat['color'] as Color).withOpacity(0.1),
                             blurRadius: 10,
-                            offset: Offset(0, 4),
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
@@ -494,12 +496,12 @@ class _EnhancedMenuScreenState extends State<MenuScreen>
                               color: stat['color'],
                             ),
                           ),
-                          SizedBox(height: 3),
+                          const SizedBox(height: 3),
                           Text(
                             stat['label'],
                             style: GoogleFonts.poppins(
                               fontSize: 10,
-                              color: Color(0xFF666666),
+                              color: const Color(0xFF666666),
                               fontWeight: FontWeight.w500,
                             ),
                             textAlign: TextAlign.center,
@@ -550,7 +552,7 @@ class EnhancedMenuButton extends StatefulWidget {
   final Function(bool) onHover;
   final VoidCallback onTap;
 
-  EnhancedMenuButton({
+  const EnhancedMenuButton({super.key, 
     required this.title,
     required this.icon,
     required this.color,
@@ -564,10 +566,10 @@ class EnhancedMenuButton extends StatefulWidget {
   });
 
   @override
-  _EnhancedMenuButtonState createState() => _EnhancedMenuButtonState();
+  EnhancedMenuButtonState createState() => EnhancedMenuButtonState();
 }
 
-class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
+class EnhancedMenuButtonState extends State<EnhancedMenuButton>
     with TickerProviderStateMixin {
   late AnimationController _scaleController;
   late AnimationController _glowController;
@@ -652,7 +654,7 @@ class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
             return Transform.scale(
               scale: _scaleAnimation.value,
               child: AnimatedContainer(
-                duration: Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutQuart,
                 transform: Matrix4.identity()
                   ..translate(
@@ -684,7 +686,7 @@ class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
                         BoxShadow(
                           color: widget.color.withOpacity(0.2),
                           blurRadius: 40,
-                          offset: Offset(0, 20),
+                          offset: const Offset(0, 20),
                         ),
                     ],
                   ),
@@ -794,7 +796,7 @@ class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   AnimatedContainer(
-                                    duration: Duration(milliseconds: 300),
+                                    duration: const Duration(milliseconds: 300),
                                     padding: EdgeInsets.all(
                                       widget.isHovered ? 14 : 12,
                                     ),
@@ -812,7 +814,7 @@ class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
                                   ),
                                   SizedBox(height: widget.isDesktop ? 20 : 16),
                                   AnimatedDefaultTextStyle(
-                                    duration: Duration(milliseconds: 300),
+                                    duration: const Duration(milliseconds: 300),
                                     style: GoogleFonts.poppins(
                                       fontSize: widget.isDesktop ? 22 : 18,
                                       fontWeight: FontWeight.bold,
@@ -821,9 +823,9 @@ class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
                                     child: Text(widget.title),
                                   ),
                                   if (widget.isDesktop) ...[
-                                    SizedBox(height: 8),
+                                    const SizedBox(height: 8),
                                     AnimatedOpacity(
-                                      duration: Duration(milliseconds: 300),
+                                      duration: const Duration(milliseconds: 300),
                                       opacity: widget.isHovered ? 1.0 : 0.8,
                                       child: Text(
                                         widget.description,
@@ -850,22 +852,20 @@ class _EnhancedMenuButtonState extends State<EnhancedMenuButton>
                                           duration: Duration(
                                             milliseconds: 300 + (index * 100),
                                           ),
-                                          margin: EdgeInsets.only(right: 6),
+                                          margin: const EdgeInsets.only(right: 6),
                                           width: 8,
                                           height: 8,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: Colors.white.withOpacity(
-                                              widget.isHovered ? 1.0 : 0.4,
-                                            ),
+                                            color: Colors.white.withAlpha(widget.isHovered ? 255 : 102),
                                           ),
                                         );
                                       }),
                                     ),
                                     AnimatedOpacity(
-                                      duration: Duration(milliseconds: 300),
+                                      duration: const Duration(milliseconds: 300),
                                       opacity: widget.isHovered ? 1.0 : 0.0,
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.arrow_forward,
                                         color: Colors.white,
                                         size: 20,

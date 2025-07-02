@@ -1,19 +1,18 @@
 import 'package:intl/intl.dart';
-import 'dart:io'; // Importa dart:io para HttpDate
 
 DateTime _parseDate(String? dateString) {
   if (dateString == null) {
     return DateTime.now();
   }
   try {
-    // Primero, intenta el formato ISO 8601
+    // First, try the standard ISO 8601 format
     return DateTime.parse(dateString);
   } catch (e) {
-    // Si falla, intenta el formato RFC 1123 (usado en cabeceras HTTP)
+    // If that fails, try the RFC 1123 format
     try {
-      return HttpDate.parse(dateString);
+      return DateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'").parse(dateString, true).toUtc();
     } catch (e2) {
-      // Si ambos fallan, retorna la hora actual como fallback
+      // If both fail, return the current time as a fallback
       print('Could not parse date: $dateString. Error: $e2');
       return DateTime.now();
     }
