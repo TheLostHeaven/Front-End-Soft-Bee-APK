@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:sotfbee/features/admin/monitoring/presentation/beehive_management_page.dart';
 import 'package:sotfbee/features/admin/monitoring/presentation/apiary_management_page.dart';
+import 'package:sotfbee/features/admin/monitoring/presentation/enhanced_monitoreo_page.dart';
 import 'package:sotfbee/features/admin/monitoring/presentation/queen_calendar_page.dart';
 import 'package:sotfbee/features/admin/monitoring/presentation/question_management_page.dart';
 import 'package:sotfbee/features/admin/monitoring/service/enhaced_api_service.dart';
@@ -802,7 +803,7 @@ class _MainMonitoringScreenState extends State<MainMonitoringScreen>
       _buildActionButton(
         icon: Icons.mic_outlined,
         label: 'Maya',
-        onPressed: () => _showMayaAlert(),
+        onPressed: () => const EnhancedMonitoreoScreen(),
         color: Colors.amber[700]!,
         width: buttonWidth,
         isDesktop: isDesktop,
